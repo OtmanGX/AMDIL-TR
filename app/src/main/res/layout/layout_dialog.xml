@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <EditText
+        android:id="@+id/edit_T1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:inputType="number"
+        android:hint="T1"
+
+         />
+    <EditText
+        android:id="@+id/edit_T2"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="T2"
+        android:layout_alignParentStart="true"
+
+        />
+    <EditText
+        android:id="@+id/edit_T3"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="T3"
+        android:layout_alignParentStart="true"
+
+        />
+    <EditText
+        android:id="@+id/edit_T4"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="T4"
+        android:layout_alignParentStart="true"
+
+        />
+    <EditText
+        android:id="@+id/edit_T5"
+        android:inputType="number"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="T5"
+        android:layout_alignParentStart="true"
+
+        />
+
+
+
+</LinearLayout>
