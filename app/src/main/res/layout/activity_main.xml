@@ -20,9 +20,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:layout_marginLeft="20dp"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="0dp"
                 android:layout_marginRight="20dp"
-                android:layout_marginBottom="10dp"
+                android:layout_marginBottom="0dp"
 
                 android:background="#F3F0F0"
                 android:elevation="7dp"
@@ -42,8 +42,9 @@
                         android:id="@+id/imageView2"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:layout_marginStart="10dp"
-                        android:layout_weight="1"
+                        android:layout_marginStart="0dp"
+                        android:layout_margin="0dp"
+                        android:layout_weight="0"
                         app:srcCompat="@drawable/logonew" />
 
                     <LinearLayout
@@ -59,26 +60,34 @@
                             android:layout_marginStart="10dp"
                             android:layout_marginTop="5dp"
                             android:text="SYSTEME AMDIL"
+                            android:textAppearance="@style/TextAppearance.AppCompat.Large"
                             android:textColor="@color/primaryLightColor"
                             android:textStyle="bold" />
 
-                        <TextView
-                            android:id="@+id/dateTV"
-                            android:layout_width="800dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="10dp"
-                            android:layout_weight="1"
-                            android:text="Date"
-                            android:textColor="@color/primaryLightColor" />
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="horizontal">
 
-                        <Button
-                            android:id="@+id/button"
-                            style="@style/Widget.AppCompat.Button"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:drawableLeft="@android:drawable/ic_menu_recent_history"
-                            android:onClick="startHistoryActivity"
-                            android:text="Historique" />
+                            <TextView
+                                android:id="@+id/dateCountdown"
+                                android:layout_width="800dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="10dp"
+                                android:layout_weight="1"
+                                android:text="Date"
+                                android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+                                android:textColor="@color/primaryLightColor" />
+
+                            <Button
+                                android:id="@+id/button"
+                                style="@style/Widget.AppCompat.Button"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:drawableLeft="@android:drawable/ic_menu_recent_history"
+                                android:onClick="startHistoryActivity"
+                                android:text="Historique" />
+                        </LinearLayout>
 
                     </LinearLayout>
 
@@ -93,6 +102,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="40dp"
                             android:layout_margin="5dp"
+                            android:padding="2dp"
                             android:background="@color/colorAccent"
                             android:text="Mode Reception"
                             android:textColor="@color/primaryLightColor"
@@ -104,6 +114,7 @@
                             android:layout_width="match_parent"
                             android:layout_height="40dp"
                             android:layout_margin="5dp"
+                            android:padding="2dp"
                             android:background="@color/primaryLightColor"
                             android:text="Mode Emession"
                             android:textColor="@color/GreenAccent"
@@ -678,8 +689,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="250dp"
                             android:layout_margin="20dp"
-                            android:padding="4dp"
-                            android:background="@color/primaryLightColor">
+                            android:background="@color/lightBlue"
+                            android:padding="4dp">
 
                         </com.github.mikephil.charting.charts.LineChart>
                     </LinearLayout>

@@ -10,6 +10,7 @@ import com.github.mikephil.charting.components.YAxis;
 import com.github.mikephil.charting.data.Entry;
 import com.github.mikephil.charting.data.LineData;
 import com.github.mikephil.charting.data.LineDataSet;
+import com.github.mikephil.charting.formatter.DefaultValueFormatter;
 import com.github.mikephil.charting.formatter.IndexAxisValueFormatter;
 import com.github.mikephil.charting.interfaces.datasets.ILineDataSet;
 
@@ -28,13 +29,32 @@ public class GraphUtils {
     public long referenceTimestamp;
     public short dataIndex=2;
     private ILineDataSet sets[] = new ILineDataSet[3];
+    private int minLimit = 0, maxLimit = 0;
 
+    /**
+     *
+     * @param context
+     * @param mChart
+     */
     public GraphUtils(Context context, LineChart mChart) {
+
         this.context = context;
         this.mChart = mChart;
         this.mChart.animateXY(2000, 2000);
     }
 
+    public GraphUtils(Context context, LineChart mChart,int minLimit, int maxLimit) {
+
+        this(context, mChart);
+        this.minLimit = minLimit;
+        this.maxLimit = maxLimit;
+    }
+
+    /**
+     *
+     * @param referenceTimestamp
+     * @param dateFormat datetime format to draw on the xaxis
+     */
     public void initGraph(long referenceTimestamp, String dateFormat) {
         mChart.getDescription().setText(context.getResources().getString(R.string.chart_description));
         mChart.getDescription().setTextSize(18);
@@ -75,9 +95,6 @@ public class GraphUtils {
         xAxis.setEnabled(true);
         mChart.setExtraTopOffset(10);
 //        mChart.getLegend().getEntries()
-
-
-
     }
 
     private LineDataSet createSet(String DynamiqueData, int color, float width) {
@@ -120,14 +137,22 @@ public class GraphUtils {
             sets[2] = data.getDataSetByIndex(dataIndex);
 
             if (sets[0] == null) {
-                sets[0] = createSet("Min",context.getResources().getColor(android.R.color.holo_green_dark), 1f);
-                sets[1] = createSet("Max",context.getResources().getColor(R.color.red), 1f);
-                sets[2] = createSet("Température",context.getResources().getColor(android.R.color.holo_purple), 2f);
+                sets[0] = createSet("Min °C",context.getResources().getColor(android.R.color.holo_green_dark), 2f);
+                sets[0].setDrawValues(true);
+                sets[0].setValueFormatter(new DefaultValueFormatter(2){
+                    @Override
+                    public String getFormattedValue(float value) {
+
+                        return super.getFormattedValue(value);
+                    }
+                });
+                sets[1] = createSet("Max °C",context.getResources().getColor(R.color.red), 2f);
+                sets[2] = createSet("Température °C",context.getResources().getColor(android.R.color.holo_purple), 2f);
                 for (ILineDataSet set: sets) data.addDataSet(set);
             } else if (sets[2] == null) {
                 sets[2] = createSet("Température",context.getResources().getColor(android.R.color.holo_purple), 2f);
                 data.addDataSet(sets[2]);
-            }
+            };
 
 
             if (x==-1) x = sets[dataIndex].getEntryCount();
@@ -140,10 +165,11 @@ public class GraphUtils {
             // let the graph know it's data has changed
             mChart.notifyDataSetChanged();
             updateLegend();
-            mChart.setVisibleXRange(1000,10000);
+            if (minLimit!=0)
+                mChart.setVisibleXRange(minLimit,maxLimit);
             mChart.moveViewToX(data.getEntryCount());
-
         }
+
     }
 
 
@@ -178,9 +204,20 @@ public class GraphUtils {
             }catch (Exception e) {
                 valueToShow = "16";
             }
-//            Log.i("valueToShow", valueToShow);
             return valueToShow;
-//            return super.getFormattedValue(value);
+        }
+    }
+
+    public class TemperatureValueFormatter extends DefaultValueFormatter {
+
+        /**
+         * Constructor that specifies to how many digits the value should be
+         * formatted.
+         *
+         * @param digits
+         */
+        public TemperatureValueFormatter(int digits) {
+            super(digits);
         }
     }
 }

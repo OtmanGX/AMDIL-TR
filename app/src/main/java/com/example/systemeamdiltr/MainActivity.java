@@ -8,7 +8,6 @@ import android.os.Bundle;
 import android.os.Handler;
 
 import android.os.Vibrator;
-import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -19,8 +18,8 @@ import android.widget.Toast;
 import com.example.systemeamdiltr.db.DatabaseHelper;
 import com.example.systemeamdiltr.entities.Temperature;
 import com.example.systemeamdiltr.utils.AppExecutors;
+import com.example.systemeamdiltr.utils.MyCountDown;
 import com.example.systemeamdiltr.utils.StorageHelper;
-import com.github.mikephil.charting.components.LimitLine;
 
 import com.physicaloid.lib.Physicaloid;
 import com.physicaloid.lib.usb.driver.uart.ReadLisener;
@@ -30,8 +29,6 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import com.github.mikephil.charting.charts.LineChart;
-import com.github.mikephil.charting.components.YAxis;
-import com.github.mikephil.charting.data.LineDataSet;
 
 
 public class MainActivity extends AppCompatActivity implements tempDialog.ExampleDialogListener {
@@ -78,6 +75,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     public static ArrayList<Integer> lastYearListP = new ArrayList<Integer>();
     public static ArrayList<String> lastYearListXP = new ArrayList<String>();
 
+    private MyCountDown countDown;
 
     int x=0,y=0 ;
     int x2=0,y2=0 ;
@@ -165,14 +163,20 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
                     }
                 }
         );
-    // get Last Month/year Data
 
-        DatabaseAccess databaseAccess=DatabaseAccess.getInstance(getApplicationContext());
-        databaseAccess.open();
-//        int monthT = databaseAccess.getMonthTData();
-//        int yearT = databaseAccess.getYearTData();
-//        int monthP = databaseAccess.getMonthPData();
-//        int yearP = databaseAccess.getYearPData();
+        // Countdown
+        countDown = new MyCountDown(30000, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                dateTV.setText(getDateTime());
+            }
+
+            @Override
+            public void onFinish() {
+                countDown.start();
+            }
+        };
+        countDown.start();
 
    // Connection Declaration;
         mPhysicaloid = new Physicaloid(this);
@@ -182,7 +186,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
    // Declaration des Champs
         tempTV =(TextView) findViewById(R.id.tempTV);
 //        presTV =(TextView) findViewById(R.id.pressTV);
-        dateTV =(TextView) findViewById(R.id.dateTV);
+        dateTV =(TextView) findViewById(R.id.dateCountdown);
 
         redImgMax  = (TextView) findViewById(R.id.redMAXTVT) ;
         greenImgMax= (TextView) findViewById(R.id.greenMAXTVT) ;
@@ -218,10 +222,6 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         mRec =(Button) findViewById(R.id.recbtn);
         mEmet = (Button) findViewById(R.id.emetrec);
 
-    //Setup de view
-
-    dateTV.setText(toDay());
-
 
     // update les valeurs
         updatBtn =(Button) findViewById(R.id.updatBtn);
@@ -250,11 +250,8 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         connect.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-
                 connexion++;
                 if(connexion<3){
-
-
                     if(mPhysicaloid.open()) {
                         if(connexion==2){
                             connect.setText("Fermer la connexion");
@@ -277,29 +274,22 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
                                     dataStock += a;
                                     if(a=='F' )
                                     {
-
                                         String data[] = dataStock.split(";",-2);
                                         if(data[0].indexOf("S")>1){
                                             affectation(data[1],data[2],data[3]) ;
-
                                         }
                                         dataStock="";
                                     }
                                 }
-
                             }
                         });
                     } else {
                         Toast.makeText(getApplicationContext(), "Cannot open", Toast.LENGTH_LONG).show();
                     }
-
                 }
-
-
                 if(connexion==3){
                     if(mPhysicaloid.close()) {
                         mPhysicaloid.clearReadListener();
-
                     }
                     connect.setText("Etablir la connexion");
                     connect.setTextColor(getApplication().getResources().getColor(R.color.primaryLightColor));
@@ -330,6 +320,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     @Override
     protected void onDestroy() {
         storeTemperatures();
+        if (countDown!=null) countDown.cancel();
         super.onDestroy();
     }
 
@@ -344,44 +335,13 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         t2Value =StorageHelper.sharedPreferences.getFloat("t2", t2Value);
         t3Value =StorageHelper.sharedPreferences.getFloat("t3", t3Value);
     }
+
     private void initChart(){
         //Chart2
         mChart2 = (LineChart) findViewById(R.id.chart);
-        graph = new GraphUtils(this, mChart2);
-//        LimitLine upper_limit = new LimitLine(t3Value, "Max");
-//        upper_limit.setLineWidth(1f);
-//
-//        upper_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_TOP);
-//        upper_limit.setTextSize(10f);
-//        upper_limit.setLineColor(getResources().getColor(R.color.red));
-//
-//        LimitLine lower_limit = new LimitLine(t1Value, "min");
-//        lower_limit.setLineWidth(1f);
-//
-//        lower_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-//        lower_limit.setTextSize(10f);
-//        upper_limit.setLineColor(getResources().getColor(R.color.GreenAccent));
-//
-//        YAxis leftAxis = mChart2.getAxisLeft();
-////        leftAxis.setStartAtZero(false);
-//        leftAxis.setAxisMinimum(0);
-//        // reset all limit lines to avoid overlapping lines
-//        leftAxis.removeAllLimitLines();
-//        leftAxis.addLimitLine(upper_limit);
-//        leftAxis.addLimitLine(lower_limit);
-//        leftAxis.setDrawLimitLinesBehindData(true);
-//        leftAxis.setEnabled(true);
-//
-//        for(int i=0;i<lastYearList.size();i++){
-//
-//            addDatatoChartYear(lastYearList.get(i),lastYearListP.get(i));
-//        }
-//        for(int i=0;i<lastMonthList.size();i++){
-//
-//            addDatatoChartMonth(lastMonthList.get(i),lastMonthListP.get(i));
-//        }
+        graph = new GraphUtils(this, mChart2, 1000, 10000);
         graph.initGraph(System.currentTimeMillis(), "today");
-        feedMultiple();
+//        feedMultiple();
     }
 
 
@@ -565,18 +525,6 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 //        sImgminP.setText("");
 
     }
-
-    // les fonction des chart
-    private LineDataSet createSet(String DynamiqueData,int color) {
-
-        LineDataSet set = new LineDataSet(null, DynamiqueData);
-        set.setAxisDependency(YAxis.AxisDependency.LEFT);
-        set.setLineWidth(3f);
-        set.setColor(color);
-        set.setCircleColor(color);
-        return set;
-    }
-
 //
 //
 //    private void addDataToChart(float tempIn, float pressIn) {
@@ -889,57 +837,6 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         setUp();
     }
 
-
-
-    // add data -----------------------------------------------------------------------
-
-    public void onSavedata(float temp,float press){
-        DatabaseAccess databaseAccess=DatabaseAccess.getInstance(getApplicationContext());
-        databaseAccess.open();
-        String date=getDate();
-        String dateymd = getdateydm();
-        int mois = Integer.parseInt(getMonth());
-        int day = Integer.parseInt(getDay());
-        databaseAccess.addData(date,dateymd,mois,day,temp,press);
-        databaseAccess.close();
-    }
-
-
-
-
-
-
-
-    public String toDay(){
-        String toDay;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = new Date();
-        toDay= dateFormat.format(date);
-
-        return toDay;
-    }
-
-    public String getDay(){
-        String mDate;
-        String theDay;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = new Date();
-        mDate= dateFormat.format(date);
-        String[] parts = mDate.split("/");
-        theDay = parts[2];
-        return theDay;
-    }
-
-    public String getMonth(){
-        String mDate;
-        String theMonth;
-        DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd");
-        Date date = new Date();
-        mDate= dateFormat.format(date);
-        String[] parts = mDate.split("/");
-        theMonth = parts[1];
-        return theMonth;
-    }
     public String getDate(){
 
         String theDate;

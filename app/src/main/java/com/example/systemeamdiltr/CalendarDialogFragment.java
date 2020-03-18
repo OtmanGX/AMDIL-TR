@@ -29,7 +29,6 @@ public class CalendarDialogFragment extends DialogFragment {
     public interface NoticeDialogListener {
         public void onDialogPositiveClick(DialogFragment dialog, Button button);
         public void onDialogNegativeClick(DialogFragment dialog);
-        public void onDialogNeutralButtonClick(DialogFragment dialog);
         public void setDate(Calendar calendar);
     }
 
@@ -86,15 +85,6 @@ public class CalendarDialogFragment extends DialogFragment {
                         listener.onDialogNegativeClick(CalendarDialogFragment.this);
                     }
                 });
-
-        if (button.getId()==R.id.buttonCalendar2) {
-            builder.setNeutralButton(R.string.now, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    listener.onDialogNeutralButtonClick(CalendarDialogFragment.this);
-                }
-            });
-        }
         return builder.create();
 
     }

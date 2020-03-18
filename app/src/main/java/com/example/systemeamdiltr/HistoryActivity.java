@@ -1,5 +1,7 @@
 package com.example.systemeamdiltr;
 
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.net.Uri;
@@ -45,10 +47,9 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
     LineChart mChart ;
     private DatabaseHelper instance;
     private GraphUtils graph;
-    ToggleButton tb;
-    ToggleButton tb2;
     Button buttonCalendar;
     Button buttonCalendar2;
+    ToggleButton toggleButton;
     EditText editText;
     EditText editText2;
     Spinner spinner;
@@ -67,21 +68,11 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
         setContentView(R.layout.activity_history);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-        tb = findViewById(R.id.toggleButton);
-        tb2 = findViewById(R.id.toggleButton2);
         editText = findViewById(R.id.editText);
         editText2 = findViewById(R.id.editText2);
         buttonCalendar = findViewById(R.id.buttonCalendar);
         buttonCalendar2 = findViewById(R.id.buttonCalendar2);
-        tb2.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                if (isChecked)
-                    mChart.clearValues();
-                    setTemperatures(20, 0, 0);
-                    mChart.notifyDataSetChanged();
-            }
-        });
+        toggleButton = findViewById(R.id.datetoggleButton);
         final String[] array = getResources().getStringArray(R.array.dates);
         spinner = (Spinner)findViewById(R.id.spinner);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
@@ -148,6 +139,34 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
         });
     }
 
+    public void showConfirmationDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Confirmation Dialog").setMessage(R.string.delete);
+        // Add the buttons
+        builder.setPositiveButton("Oui", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                AppExecutors.getInstance().diskIO().execute(
+                        new Runnable() {
+                            @Override
+                            public void run() {
+                                instance.tempDao().clear();
+                            }
+                        }
+                );
+            }
+        });
+        builder.setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancelled the dialog
+            }
+        });
+
+        // Create the AlertDialog
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
@@ -160,14 +179,7 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
         // Handle item selection
         switch (item.getItemId()) {
             case R.id.clear:
-                AppExecutors.getInstance().diskIO().execute(
-                        new Runnable() {
-                            @Override
-                            public void run() {
-                        instance.tempDao().clear();
-                            }
-                        }
-                );
+                showConfirmationDialog();
                 return true;
             default:
                 return super.onOptionsItemSelected(item);
@@ -258,22 +270,15 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
 
     public void setDate(Calendar date, boolean begin) {
 
-        SimpleDateFormat dateFormat2 = new SimpleDateFormat("yy/MM/dd");
+        SimpleDateFormat dateFormat2 = new SimpleDateFormat("yyyy/MM/dd");
         if (begin) {
             from = date;
             buttonCalendar.setText(dateFormat2.format(from.getTime()));
         } else {
             to = date;
             buttonCalendar2.setText(dateFormat2.format(to.getTime()));
-            editText2.setVisibility(View.VISIBLE);
         }
 
-    }
-
-    public void toNow() {
-        buttonCalendar2.setText(R.string.now);
-        editText2.setVisibility(View.INVISIBLE);
-        editText2.setText("00:00");
     }
 
     public void validate_entries(View view) {
@@ -281,24 +286,26 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
             showEntryError(editText);
             return;
         };
-        if(!validate_entry(editText2)) {
+        if(!toggleButton.isChecked() && !validate_entry(editText2)) {
             showEntryError(editText2);
             return;
         };
+        long maxTime, minTime;
         String [] timeList = editText.getText().toString().split(":");
 //        Integer.parseInt(timeList[0]
         from.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeList[0]));
         from.set(Calendar.MINUTE, Integer.parseInt(timeList[1]));
-        long maxTime;
-        if (buttonCalendar2.getText().toString().equals("Maintenant")) {
+        minTime =  from.getTime().getTime();
+        if (toggleButton.isChecked()) {
             maxTime = 0;
         } else {
             String [] timeList2 = editText2.getText().toString().split(":");
             to.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeList2[0]));
             to.set(Calendar.MINUTE, Integer.parseInt(timeList2[1]));
             maxTime = to.getTime().getTime();
+            if (maxTime-minTime<=0) showEntryError(editText2);
         }
-        setTemperatures(0, from.getTime().getTime(), maxTime);
+        setTemperatures(0,minTime, maxTime);
     }
 
 
@@ -397,11 +404,6 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
     @Override
     public void onDialogNegativeClick(DialogFragment dialog) {
 
-    }
-
-    @Override
-    public void onDialogNeutralButtonClick(DialogFragment dialog) {
-        toNow();
     }
 
 
