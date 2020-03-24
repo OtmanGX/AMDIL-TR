@@ -1,6 +1,7 @@
 package com.example.systemeamdiltr;
 
 import android.content.Context;
+import android.util.Log;
 
 import com.github.mikephil.charting.charts.LineChart;
 import com.github.mikephil.charting.components.Legend;
@@ -27,9 +28,11 @@ public class GraphUtils {
     Context context;
     LineChart mChart;
     public long referenceTimestamp;
-    public short dataIndex=2;
-    private ILineDataSet sets[] = new ILineDataSet[3];
+    public short dataIndex = 0;
+    private ILineDataSet sets[] = new ILineDataSet[4];
     private int minLimit = 0, maxLimit = 0;
+
+    private float maxValue;
 
     /**
      *
@@ -59,10 +62,12 @@ public class GraphUtils {
         mChart.getDescription().setText(context.getResources().getString(R.string.chart_description));
         mChart.getDescription().setTextSize(18);
         mChart.getLegend().setTextSize(14);
+        mChart.resetZoom();
+        mChart.fitScreen();
 
         try {
+            dataIndex = 0;
             mChart.clearValues();
-            dataIndex = 2;
             mChart.invalidate();
 
 
@@ -122,52 +127,53 @@ public class GraphUtils {
             legendEntry.add(legend.getEntries()[0]);
             legendEntry.add(legend.getEntries()[1]);
             legendEntry.add(legend.getEntries()[2]);
+            legendEntry.add(legend.getEntries()[3]);
         }
         else return;
         legend.setEntries(legendEntry);
     }
 
+    public void createSets(LineData data) {
+        sets[0] = createSet("Min °C",context.getResources().getColor(android.R.color.holo_green_dark), 2f);
+        sets[1] = createSet("Max °C",context.getResources().getColor(R.color.red), 2f);
+        sets[2] = createSet("Normal °C",context.getResources().getColor(android.R.color.holo_orange_light), 2f);
+        sets[3] = createSet("Température °C",context.getResources().getColor(android.R.color.holo_purple), 2f);
+        sets[3].setValueFormatter(new TemperatureValueFormatter(2));
+        sets[3].setDrawValues(true);
+        for (ILineDataSet set: sets) data.addDataSet(set);
+    }
 
-    public void addEntry(long x, float y, float min, float max) {
+
+    public void addEntry(long x, float y, float min, float max, float normal) {
         LineData data = mChart.getData();
         if (data != null) {
-
-            sets[0] = data.getDataSetByIndex(0);
-            sets[1] = data.getDataSetByIndex(1);
-            sets[2] = data.getDataSetByIndex(dataIndex);
+            sets[0] = data.getDataSetByIndex(dataIndex);
+            sets[1] = data.getDataSetByIndex(dataIndex+1);
+            sets[2] = data.getDataSetByIndex(dataIndex+2);
+            sets[3] = data.getDataSetByIndex(dataIndex+3);
 
             if (sets[0] == null) {
-                sets[0] = createSet("Min °C",context.getResources().getColor(android.R.color.holo_green_dark), 2f);
-                sets[0].setDrawValues(true);
-                sets[0].setValueFormatter(new DefaultValueFormatter(2){
-                    @Override
-                    public String getFormattedValue(float value) {
+                createSets(data);
+            }
 
-                        return super.getFormattedValue(value);
-                    }
-                });
-                sets[1] = createSet("Max °C",context.getResources().getColor(R.color.red), 2f);
-                sets[2] = createSet("Température °C",context.getResources().getColor(android.R.color.holo_purple), 2f);
-                for (ILineDataSet set: sets) data.addDataSet(set);
-            } else if (sets[2] == null) {
-                sets[2] = createSet("Température",context.getResources().getColor(android.R.color.holo_purple), 2f);
-                data.addDataSet(sets[2]);
-            };
+            maxValue = max;
+            if (x==-1) x = sets[3].getEntryCount();
+            data.addEntry(new Entry(x, min), dataIndex);
+            data.addEntry(new Entry(x, max), dataIndex+1);
+            data.addEntry(new Entry(x, normal), dataIndex+2);
+            data.addEntry(new Entry(x, y), dataIndex+3);
 
 
-            if (x==-1) x = sets[dataIndex].getEntryCount();
-            data.addEntry(new Entry(x, min), 0);
-            data.addEntry(new Entry(x, max), 1);
-            data.addEntry(new Entry(x, y), dataIndex);
-            mChart.invalidate();
             data.notifyDataChanged();
 
             // let the graph know it's data has changed
             mChart.notifyDataSetChanged();
+            mChart.invalidate();
             updateLegend();
             if (minLimit!=0)
                 mChart.setVisibleXRange(minLimit,maxLimit);
             mChart.moveViewToX(data.getEntryCount());
+
         }
 
     }
@@ -209,15 +215,39 @@ public class GraphUtils {
     }
 
     public class TemperatureValueFormatter extends DefaultValueFormatter {
-
+        Entry currentEntry;
+        float max;
         /**
-         * Constructor that specifies to how many digits the value should be
-         * formatted.
          *
          * @param digits
          */
         public TemperatureValueFormatter(int digits) {
             super(digits);
+        }
+
+
+        @Override
+        public String getFormattedValue(float value) {
+            ILineDataSet set;
+            int i=1;
+            do {
+                set = mChart.getData().getDataSetByIndex(i);
+                if (currentEntry.getX()<=
+                        set.getEntryForIndex(set.getEntryCount()-1).getX())
+                    break;
+                i+=4;
+            } while (i<dataIndex+2);
+            max = set.getEntryForXValue(currentEntry.getX(), currentEntry.getY()).getY();
+            if (value > max)
+                return super.getFormattedValue(value);
+            else
+                return "";
+        }
+
+        @Override
+        public String getPointLabel(Entry entry) {
+            currentEntry = entry;
+            return super.getPointLabel(entry);
         }
     }
 }

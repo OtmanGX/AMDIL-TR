@@ -42,15 +42,15 @@
                         android:id="@+id/imageView2"
                         android:layout_width="wrap_content"
                         android:layout_height="match_parent"
-                        android:layout_margin="0dp"
                         android:layout_marginStart="0dp"
-                        android:layout_weight="1"
+                        android:layout_margin="0dp"
+                        android:layout_weight="0"
                         app:srcCompat="@drawable/logonew" />
 
                     <LinearLayout
                         android:layout_width="wrap_content"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="2"
                         android:orientation="vertical">
 
                         <TextView
@@ -67,7 +67,6 @@
                         <LinearLayout
                             android:layout_width="match_parent"
                             android:layout_height="match_parent"
-                            android:layout_weight="1"
                             android:orientation="horizontal">
 
                             <Button
@@ -81,7 +80,7 @@
 
                             <TextView
                                 android:id="@+id/dateCountdown"
-                                android:layout_width="wrap_content"
+                                android:layout_width="800dp"
                                 android:layout_height="wrap_content"
                                 android:layout_marginStart="10dp"
                                 android:layout_weight="1"
@@ -96,7 +95,6 @@
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:orientation="vertical">
 
                         <Button
@@ -104,8 +102,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="40dp"
                             android:layout_margin="5dp"
-                            android:background="@color/colorAccent"
                             android:padding="2dp"
+                            android:background="@color/colorAccent"
                             android:text="Mode Reception"
                             android:textColor="@color/primaryLightColor"
                             android:textSize="12sp"
@@ -116,8 +114,8 @@
                             android:layout_width="match_parent"
                             android:layout_height="40dp"
                             android:layout_margin="5dp"
-                            android:background="@color/primaryLightColor"
                             android:padding="2dp"
+                            android:background="@color/primaryLightColor"
                             android:text="Mode Emession"
                             android:textColor="@color/GreenAccent"
                             android:textSize="12sp"
@@ -126,10 +124,9 @@
 
                     <Button
                         android:id="@+id/connect_id"
-                        android:layout_width="wrap_content"
+                        android:layout_width="110dp"
                         android:layout_height="80dp"
                         android:layout_margin="5dp"
-                        android:layout_weight="2"
                         android:background="@color/colorAccent"
                         android:text="Etablir la connexion"
                         android:textColor="@color/primaryLightColor"
@@ -139,10 +136,9 @@
 
                     <Button
                         android:id="@+id/updatBtn"
-                        android:layout_width="wrap_content"
+                        android:layout_width="110dp"
                         android:layout_height="80dp"
                         android:layout_margin="5dp"
-                        android:layout_weight="2"
                         android:background="@color/colorAccent"
                         android:text="Mise a jour des valeurs"
                         android:textColor="@color/lightBlue"
@@ -666,29 +662,30 @@
 
 
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_marginLeft="5dp"
-                    android:layout_marginTop="5dp"
-                    android:layout_marginRight="5dp"
-                    android:layout_marginBottom="5dp"
-                    android:layout_weight="1"
-                    android:background="#F3F0F0"
-                    android:elevation="7dp"
-                    android:orientation="vertical">
-
-                    <com.github.mikephil.charting.charts.LineChart
-                        android:id="@+id/chart"
                         android:layout_width="match_parent"
-                        android:layout_height="250dp"
-                        android:layout_margin="20dp"
-                        android:background="@color/lightBlue"
-                        android:padding="4dp">
+                        android:layout_height="match_parent"
+                        android:layout_marginLeft="5dp"
+                        android:layout_marginTop="5dp"
+                        android:layout_marginRight="5dp"
+                        android:layout_marginBottom="5dp"
+                        android:layout_weight="1"
+                        android:background="#F3F0F0"
+                        android:elevation="7dp"
+                        android:orientation="vertical">
 
-                    </com.github.mikephil.charting.charts.LineChart>
+                        <com.github.mikephil.charting.charts.LineChart
+                            android:id="@+id/chart"
+                            android:layout_width="match_parent"
+                            android:layout_height="250dp"
+                            android:layout_margin="20dp"
+                            android:background="@color/lightBlue"
+                            android:padding="4dp">
+
+                        </com.github.mikephil.charting.charts.LineChart>
+                    </LinearLayout>
+
+
             </LinearLayout>
-
-                </LinearLayout>
 
         </LinearLayout>
     </ScrollView>

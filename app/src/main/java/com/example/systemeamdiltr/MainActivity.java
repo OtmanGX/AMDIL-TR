@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 
 import android.os.Vibrator;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
@@ -25,6 +26,7 @@ import com.physicaloid.lib.Physicaloid;
 import com.physicaloid.lib.usb.driver.uart.ReadLisener;
 
 import java.text.DateFormat;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -274,9 +276,14 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
                                     dataStock += a;
                                     if(a=='F' )
                                     {
-                                        String data[] = dataStock.split(";",-2);
+                                        final String data[] = dataStock.split(";",-2);
                                         if(data[0].indexOf("S")>1){
-                                            affectation(data[1],data[2],data[3]) ;
+                                            runOnUiThread(new Runnable() {
+                                                @Override
+                                                public void run() {
+                                                    affectation(data[1],data[2],data[3]) ;
+                                                }
+                                            });
                                         }
                                         dataStock="";
                                     }
@@ -324,7 +331,15 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         super.onDestroy();
     }
 
+    @Override
+    protected void onStop() {
+        storeTemperatures();
+        if (countDown!=null) countDown.cancel();
+        super.onStop();
+    }
+
     private void storeTemperatures() {
+        Log.w("Store temperature", String.valueOf(t1Value));
         StorageHelper.editor.putFloat("t1", t1Value).apply();
         StorageHelper.editor.putFloat("t2", t2Value).apply();
         StorageHelper.editor.putFloat("t3", t3Value).apply();
@@ -383,41 +398,27 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
                              ) {
 
         // les afficheur des valeurs
-        final Float tempF=(Float.parseFloat(temp))/100;
+        Float tempInit=(Float.parseFloat(temp))/100;
+        final  float tempF = Float.valueOf(String.format("%.2f", tempInit));
         final Float pressF=(Float.parseFloat(press))/100;
 
-        tvAppend(tempTV,(String.format("%.2f",tempF))+" °C");
+        tvAppend(tempTV,tempF+" °C");
 //        tvAppend(presTV,(Float.toString(pressF))+" Bar");
 
-
         // la gestion de signalisation
-//
-//        mHandler.post(new Runnable() {
-//            @Override
-//            public void run() {
+        signalisation(tempF,pressF);
 
+        long diff = System.currentTimeMillis()-graph.referenceTimestamp;
 
-//                if (tryParseInt(temp) && tryParseInt(press) ) {
-
-//                    onSavedata(tempF,pressF);
-                    signalisation(tempF,pressF);
-//                    addDataToChart(tempF,pressF);
-//                    addDatatoChartMonthNew(tempF, pressF);
-                    long diff = System.currentTimeMillis()-graph.referenceTimestamp;
-                    graph.addEntry(diff, tempF, t1Value, t3Value);
-                    showMode(Integer.parseInt(msg));
-//                }
-
-
-//            }
-//        });
+        graph.addEntry(diff, tempF, t1Value, t3Value, t2Value);
+        showMode(Integer.parseInt(msg));
 
 
         AppExecutors.getInstance().diskIO().execute(
                 new Runnable() {
                     @Override
                     public void run() {
-                        instance.tempDao().insert(new Temperature(t1Value, t3Value, new Date(), tempF));
+                        instance.tempDao().insert(new Temperature(t1Value, t3Value, t2Value, new Date(), tempF));
                     }
                 }
         );
@@ -816,18 +817,14 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     }
 
     @Override
-    public void applyTexts(String t1, String t2, String t3, String t4, String t5) {
+    public void applyTexts(String t1, String t2, String t3) {
 
      if(tP==1){
-         t5Value = Integer.parseInt(t5);
-         t4Value = Integer.parseInt(t4);
          t3Value= Integer.parseInt(t3);
          t2Value= Integer.parseInt(t2);
          t1Value= Integer.parseInt(t1);
      }
         if(tP==2){
-            p5Value = Integer.parseInt(t5);
-            p4Value = Integer.parseInt(t4);
             p3Value= Integer.parseInt(t3);
             p2Value= Integer.parseInt(t2);
             p1Value= Integer.parseInt(t1);

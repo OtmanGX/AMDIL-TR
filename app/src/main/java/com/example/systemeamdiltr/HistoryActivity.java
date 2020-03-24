@@ -53,8 +53,8 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
     EditText editText;
     EditText editText2;
     Spinner spinner;
-    Calendar from;
-    Calendar to;
+    Calendar from = getCurrentDay();
+    Calendar to = getCurrentDay();
     Calendar dateSelected;
 
     // To Draw Line chart
@@ -217,7 +217,7 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
         cal.clear(Calendar.SECOND);
         cal.clear(Calendar.MILLISECOND);
 
-// get start of this week in milliseconds
+        // get start of this week in milliseconds
         Log.i("Start of this week:" ,cal.getFirstDayOfWeek()+"");
         Log.i("... in milliseconds:" , cal.getTimeInMillis()+"");
         return cal;
@@ -290,20 +290,30 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
             showEntryError(editText2);
             return;
         };
+
         long maxTime, minTime;
+
         String [] timeList = editText.getText().toString().split(":");
-//        Integer.parseInt(timeList[0]
         from.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeList[0]));
         from.set(Calendar.MINUTE, Integer.parseInt(timeList[1]));
         minTime =  from.getTime().getTime();
-        if (toggleButton.isChecked()) {
+        if (minTime>System.currentTimeMillis())
+        {
+            showEntryError(editText);
+            return;
+        }
+        if (toggleButton.isChecked())
             maxTime = 0;
-        } else {
+        else {
             String [] timeList2 = editText2.getText().toString().split(":");
             to.set(Calendar.HOUR_OF_DAY, Integer.parseInt(timeList2[0]));
             to.set(Calendar.MINUTE, Integer.parseInt(timeList2[1]));
             maxTime = to.getTime().getTime();
-            if (maxTime-minTime<=0) showEntryError(editText2);
+            if (maxTime>System.currentTimeMillis() || minTime>=maxTime)
+            {
+                showEntryError(editText2);
+                return;
+            }
         }
         setTemperatures(0,minTime, maxTime);
     }
@@ -318,7 +328,6 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
             valid = timeValidator.validate(time);
             }
         return valid;
-
     }
 
     public void showEntryError(EditText editText) {
@@ -339,17 +348,20 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
                         if (n!=0) {
                         temperatures = instance.tempDao().getTop(n);}
                         else if (maxTime==0){
-                        temperatures = instance.tempDao().findTemperaturesGreatherthanDate(new Date(minTime));
+                            to  = getCurrentDay();
+                            temperatures = instance.tempDao().findTemperaturesGreatherthanDate(new Date(minTime));
                         } else {
-                            int dateDiff = from.get(Calendar.DAY_OF_YEAR)-to.get(Calendar.DAY_OF_YEAR);
-                            if (dateDiff>7)
-                                setDateFormat("month");
-                            else if (dateDiff>1)
-                                setDateFormat("week");
-                            else {
-                                setDateFormat("today");
-                            }
                             temperatures = instance.tempDao().findTemperaturesBetweenDates(new Date(minTime), new Date(maxTime));
+                        }
+
+                        // Set date format
+                        int dateDiff = to.get(Calendar.DAY_OF_YEAR)-from.get(Calendar.DAY_OF_YEAR);
+                        if (dateDiff>7)
+                            setDateFormat("month");
+                        else if (dateDiff>=1)
+                            setDateFormat("week");
+                        else {
+                            setDateFormat("today");
                         }
                         if (temperatures.size()>0) {
                             final long firstdate = temperatures.get(0).date.getTime();
@@ -363,19 +375,10 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
                                         for (final Temperature t : temperatures) {
                                             diff = t.date.getTime() - firstdate;
                                             if ((diff - lastDiff) > 10000) {
-                                                graph.dataIndex++;
+                                                graph.dataIndex += 4;
                                             }
-//                                        if (diff >10000) {
-//                                            int i=500;
-//                                            do {
-//                                                graph.addEntry(lastDiff+i, 0, t.date);
-//                                                i+=500;
-//                                            } while ((i+lastDiff)<=diff);
-//                                        }
-                                            graph.addEntry(diff, (float) t.value, t.min, t.max);
+                                            graph.addEntry(diff, (float) t.value, t.min, t.max, t.normal);
                                             lastDiff = diff;
-
-
                                         }
                                     }
                                 });
@@ -393,19 +396,17 @@ public class HistoryActivity extends AppCompatActivity implements CalendarDialog
 
     @Override
     public void onDialogPositiveClick(DialogFragment dialog, Button button) {
-        if (dateSelected!=null)
-            if (button.getId()==R.id.buttonCalendar) {
-                setDate(dateSelected, true);
-            } else {
-                setDate(dateSelected, false);
-            }
+        dateSelected = dateSelected!=null ? dateSelected:getCurrentDay();
+        if (button.getId()==R.id.buttonCalendar) {
+            setDate(dateSelected, true);
+        } else {
+            setDate(dateSelected, false);
+        }
     }
 
     @Override
     public void onDialogNegativeClick(DialogFragment dialog) {
-
     }
-
 
     @Override
     public void setDate(Calendar calendar) {

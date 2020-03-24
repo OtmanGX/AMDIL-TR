@@ -17,9 +17,7 @@ import static com.example.systemeamdiltr.MainActivity.tP;
 
 
 public class tempDialog extends AppCompatDialogFragment {
-    private EditText eT1,eT2,eT3,eT4,eT5;
-
-
+    private EditText eT1,eT2,eT3;
     private ExampleDialogListener listener;
 
     @Override
@@ -46,10 +44,8 @@ public class tempDialog extends AppCompatDialogFragment {
                         String t1value = eT1.getText().toString();
                         String t2value = eT2.getText().toString();
                         String t3value = eT3.getText().toString();
-                        String t4value = eT4.getText().toString();
-                        String t5value = eT5.getText().toString();
-                        if(isNumeric(t1value) && isNumeric(t2value) && isNumeric(t3value) &&isNumeric(t4value) && isNumeric(t5value) ){
-                            listener.applyTexts(t1value, t2value,t3value,t4value,t5value);
+                        if(isNumeric(t1value) && isNumeric(t2value) && isNumeric(t3value) ){
+                            listener.applyTexts(t1value, t2value,t3value);
                         }else {
                             Toast.makeText(getContext(), "Veuillez remplir tous les champs avec des nombres", Toast.LENGTH_LONG).show();
                         }
@@ -60,20 +56,15 @@ public class tempDialog extends AppCompatDialogFragment {
         eT1 = view.findViewById(R.id.edit_T1);
         eT2 = view.findViewById(R.id.edit_T2);
         eT3 = view.findViewById(R.id.edit_T3);
-        eT4 = view.findViewById(R.id.edit_T4);
-        eT5 = view.findViewById(R.id.edit_T5);
+
         if(tP==1){
             eT1.setHint("T1");
             eT2.setHint("T2");
             eT3.setHint("T3");
-            eT4.setHint("T4");
-            eT5.setHint("T5");
         }else {
             eT1.setHint("P1");
             eT2.setHint("P2");
             eT3.setHint("P3");
-            eT4.setHint("P4");
-            eT5.setHint("P5");
         }
 
         return builder.create();
@@ -92,7 +83,7 @@ public class tempDialog extends AppCompatDialogFragment {
     }
 
     public interface ExampleDialogListener {
-        void applyTexts(String t1, String t2, String t3, String t4, String t5);
+        void applyTexts(String t1, String t2, String t3);
     }
     public boolean isNumeric(String s) {
         return s != null && s.matches("[-+]?\\d*\\.?\\d+");
