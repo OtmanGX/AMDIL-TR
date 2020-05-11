@@ -356,7 +356,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         mChart2 = (LineChart) findViewById(R.id.chart);
         graph = new GraphUtils(this, mChart2, 1000, 10000);
         graph.initGraph(System.currentTimeMillis(), "today");
-//        feedMultiple();
+        feedMultiple();
     }
 
 
@@ -399,7 +399,9 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
         // les afficheur des valeurs
         Float tempInit=(Float.parseFloat(temp))/100;
-        final  float tempF = Float.valueOf(String.format("%.2f", tempInit));
+        DecimalFormat df = new DecimalFormat(".##");
+//        final  float tempF  = Float.valueOf(String.format("%.2f", tempInit));
+        final  float tempF = Float.valueOf(df.format(tempInit));
         final Float pressF=(Float.parseFloat(press))/100;
 
         tvAppend(tempTV,tempF+" °C");
