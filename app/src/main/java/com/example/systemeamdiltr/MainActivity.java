@@ -2,11 +2,21 @@ package com.example.systemeamdiltr;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
+import android.hardware.usb.UsbDevice;
+import android.hardware.usb.UsbDeviceConnection;
+import android.hardware.usb.UsbManager;
 import android.os.Bundle;
 
 import android.os.Handler;
 
+import android.os.IBinder;
+import android.os.Message;
 import android.os.Vibrator;
 import android.util.Log;
 import android.view.View;
@@ -22,14 +32,18 @@ import com.example.systemeamdiltr.utils.AppExecutors;
 import com.example.systemeamdiltr.utils.MyCountDown;
 import com.example.systemeamdiltr.utils.StorageHelper;
 
+import com.felhr.usbserial.UsbSerialDevice;
 import com.physicaloid.lib.Physicaloid;
 import com.physicaloid.lib.usb.driver.uart.ReadLisener;
 
+import java.lang.ref.WeakReference;
 import java.text.DateFormat;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Set;
+
 import com.github.mikephil.charting.charts.LineChart;
 
 
@@ -40,7 +54,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     private Physicaloid mPhysicaloid;
     private byte[] buf ;
     private Thread thread;
-    private Handler mHandler = new Handler();
+    private Handler mHandler2 = new Handler();
     private Button connect;
     public static int tP ;
     private Button btnClose;
@@ -106,12 +120,12 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
             sImgmin;
 
     TextView redImgMaxP,
-           greenImgMaxP,
-           orangImgMaxP,
+            greenImgMaxP,
+            orangImgMaxP,
             sImgMaxP,
-             redImgminP,
-           greenImgminP,
-           orangImgminP,
+            redImgminP,
+            greenImgminP,
+            orangImgminP,
             sImgminP;
 
     float   t5Value = 25,
@@ -128,27 +142,44 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
 
     ImageView redImg,
-             sImg,
+            sImg,
             greenImg,
             orangeImg;
 
     ImageView redImgP,
-             sImgP,
+            sImgP,
             greenImgP,
             orangeImgP;
 
 
     Button updatBtn ;
 
-//    Button pConfig;
+    //    Button pConfig;
     Button tConfig;
     private DatabaseHelper instance;
     private GraphUtils graph;
 
-// on creat ---------------------------------------------------------------------------------------------
+    // Serial
+    UsbManager usbManager;
+    UsbDevice device;
+    UsbSerialDevice serialPort;
+    UsbDeviceConnection connection;
+    public final String ACTION_USB_PERMISSION = "confoosball.lmu.mff.confoosball.USB_PERMISSION";
+
+    // new
+    private UsbService usbService;
+    private MyHandler mHandler;
+    String data = "";
+
+
+    // on creat ---------------------------------------------------------------------------------------------
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        mHandler = new MyHandler((MainActivity) this);
+        usbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
+        setFilters();
+        startService(UsbService.class, usbConnection, null);
         setContentView(R.layout.activity_main);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
@@ -180,12 +211,12 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         };
         countDown.start();
 
-   // Connection Declaration;
+        // Connection Declaration;
         mPhysicaloid = new Physicaloid(this);
         mPhysicaloid.setBaudrate(9600);
         connect=(Button) findViewById(R.id.connect_id);
 
-   // Declaration des Champs
+        // Declaration des Champs
         tempTV =(TextView) findViewById(R.id.tempTV);
 //        presTV =(TextView) findViewById(R.id.pressTV);
         dateTV =(TextView) findViewById(R.id.dateCountdown);
@@ -225,7 +256,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         mEmet = (Button) findViewById(R.id.emetrec);
 
 
-    // update les valeurs
+        // update les valeurs
         updatBtn =(Button) findViewById(R.id.updatBtn);
         updatBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -237,77 +268,79 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
 
 
-    // les préferences
+        // les préferences
         setUp();
         updateValues();
 
 
-     //Déclaration des chart
+        //Déclaration des chart
         //Chart1
         initChart();
 
 
-   //  Etablir la connection
+        //  Etablir la connection
 
-        connect.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                connexion++;
-                if(connexion<3){
-                    if(mPhysicaloid.open()) {
-                        if(connexion==2){
-                            connect.setText("Fermer la connexion");
-                            connect.setTextColor(getApplication().getResources().getColor(R.color.GreenAccent));
-                        }
-
-                        mPhysicaloid.addReadListener(new ReadLisener() {
-                            @Override
-                            public void onRead(int size) {
-
-                                buf = new byte[size];
-
-                                mPhysicaloid.read(buf, size);
-
-
-                                for(int i=0;i<size;i++)
-                                {
-                                    char a=(char)buf[i];
-
-                                    dataStock += a;
-                                    if(a=='F' )
-                                    {
-                                        final String data[] = dataStock.split(";",-2);
-                                        if(data[0].indexOf("S")>1){
-                                            runOnUiThread(new Runnable() {
-                                                @Override
-                                                public void run() {
-                                                    affectation(data[1],data[2],data[3]) ;
-                                                }
-                                            });
-                                        }
-                                        dataStock="";
-                                    }
-                                }
-                            }
-                        });
-                    } else {
-                        Toast.makeText(getApplicationContext(), "Cannot open", Toast.LENGTH_LONG).show();
-                    }
-                }
-                if(connexion==3){
-                    if(mPhysicaloid.close()) {
-                        mPhysicaloid.clearReadListener();
-                    }
-                    connect.setText("Etablir la connexion");
-                    connect.setTextColor(getApplication().getResources().getColor(R.color.primaryLightColor));
-                    connexion=1;
-                }
-            }
-        });
+//        connect.setOnClickListener(new View.OnClickListener() {
+//            @Override
+//            public void onClick(View view) {
+//                mPhysicaloid = new Physicaloid(getApplicationContext());
+//                mPhysicaloid.setBaudrate(9600);
+//                connexion++;
+//                if(connexion<3){
+//                    if(mPhysicaloid.open()) {
+//                        if(connexion==2){
+//                            connect.setText("Fermer la connexion");
+//                            connect.setTextColor(getApplication().getResources().getColor(R.color.GreenAccent));
+//                        }
+//
+//                        mPhysicaloid.addReadListener(new ReadLisener() {
+//                            @Override
+//                            public void onRead(int size) {
+//
+//                                buf = new byte[size];
+//
+//                                mPhysicaloid.read(buf, size);
+//
+//
+//                                for(int i=0;i<size;i++)
+//                                {
+//                                    char a=(char)buf[i];
+//
+//                                    dataStock += a;
+//                                    if(a=='F' )
+//                                    {
+//                                        final String data[] = dataStock.split(";",-2);
+//                                        if(data[0].indexOf("S")>1){
+//                                            runOnUiThread(new Runnable() {
+//                                                @Override
+//                                                public void run() {
+//                                                    affectation(data[1],data[2],data[3]) ;
+//                                                }
+//                                            });
+//                                        }
+//                                        dataStock="";
+//                                    }
+//                                }
+//                            }
+//                        });
+//                    } else {
+//                        Toast.makeText(getApplicationContext(), "Cannot open", Toast.LENGTH_LONG).show();
+//                    }
+//                }
+//                if(connexion==3){
+//                    if(mPhysicaloid.close()) {
+//                        mPhysicaloid.clearReadListener();
+//                    }
+//                    connect.setText("Etablir la connexion");
+//                    connect.setTextColor(getApplication().getResources().getColor(R.color.primaryLightColor));
+//                    connexion=1;
+//                }
+//            }
+//        });
 
         // Température Configuration
 //        pConfig = (Button) findViewById(R.id.configPbtn) ;
-        tConfig = (Button) findViewById(R.id.configTbtn) ;
+        tConfig = (Button) findViewById(R.id.configTbtn);
         tConfig.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -328,6 +361,11 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     protected void onDestroy() {
         storeTemperatures();
         if (countDown!=null) countDown.cancel();
+        try {
+            unregisterReceiver(broadcastReceiver);
+            unbindService(usbConnection);
+        } catch (Exception e) {}
+
         super.onDestroy();
     }
 
@@ -354,9 +392,9 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     private void initChart(){
         //Chart2
         mChart2 = (LineChart) findViewById(R.id.chart);
-        graph = new GraphUtils(this, mChart2, 1000, 10000);
+        graph = new GraphUtils(this, mChart2, 2000, 5000);
         graph.initGraph(System.currentTimeMillis(), "today");
-        feedMultiple();
+//        feedMultiple();
     }
 
 
@@ -375,18 +413,18 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
         thread = new Thread() {
             public void run() {
-            for (int i = 0; i < 10; i++) {
+                for (int i = 0; i < 200; i++) {
 
-                // Don't generate garbage runnables inside the loop.
-                runOnUiThread(runnable);
+                    // Don't generate garbage runnables inside the loop.
+                    runOnUiThread(runnable);
 
-                try {
-                    Thread.sleep(500);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
+                    try {
+                        Thread.sleep(500);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
-        }
         };
 
         thread.start();
@@ -395,15 +433,13 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
     //Fonction d'affectation
     private void affectation(final String temp, final String press, final String msg
-                             ) {
-
+    ) {
         // les afficheur des valeurs
         Float tempInit=(Float.parseFloat(temp))/100;
         DecimalFormat df = new DecimalFormat(".##");
 //        final  float tempF  = Float.valueOf(String.format("%.2f", tempInit));
-        final  float tempF = Float.valueOf(df.format(tempInit));
+        final  float tempF = Float.valueOf(df.format(tempInit).replace(',','.'));
         final Float pressF=(Float.parseFloat(press))/100;
-
         tvAppend(tempTV,tempF+" °C");
 //        tvAppend(presTV,(Float.toString(pressF))+" Bar");
 
@@ -432,7 +468,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     private void tvAppend(TextView tv, final CharSequence text) {
         final TextView ftv = tv;
         final CharSequence ftext = text;
-        mHandler.post(new Runnable() {
+        mHandler2.post(new Runnable() {
             @Override
             public void run() {
                 ftv.setText(text);
@@ -451,7 +487,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
 
     }
     private void signalisation(float temp, float press) {
-    //  Temperature signalisation
+        //  Temperature signalisation
         //  Red signalisation
         if (temp>= t2Value){
             redImg.setImageResource(R.drawable.ledred);
@@ -459,7 +495,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         if (temp < t2Value){
             redImg.setImageResource(R.drawable.ledoff);
         }
-         //  Orange signalisation
+        //  Orange signalisation
         if (temp>= t1Value && temp< t2Value ){
             orangeImg.setImageResource(R.drawable.ledorange);
         } else orangeImg.setImageResource(R.drawable.ledoff);
@@ -479,7 +515,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         }
 
 
-    //  Pression signalisation
+        //  Pression signalisation
         //  Red signalisation
 //        if (press>= p2Value){
 //            redImgP.setImageResource(R.drawable.ledred);
@@ -510,289 +546,14 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     private void setUp() {
 
         redImgMax.setText("");
-        orangImgMax.setText("< "+ Float.toString(t3Value)+ "°C");
-        greenImgMax.setText("< "+ Float.toString(t2Value)+ "°C");
-        sImgMax.setText("< "+ Float.toString(t1Value)+ "°C");
-        redImgmin.setText(Float.toString(t3Value)+ "°C <");
-        greenImgmin.setText(Float.toString(t1Value)+ "°C <");
-        orangImgmin.setText(Float.toString(t2Value)+ "°C <");
+        orangImgMax.setText("< " + Float.toString(t3Value) + "°C");
+        greenImgMax.setText("< " + Float.toString(t2Value) + "°C");
+        sImgMax.setText("< " + Float.toString(t1Value) + "°C");
+        redImgmin.setText(Float.toString(t3Value) + "°C <");
+        greenImgmin.setText(Float.toString(t1Value) + "°C <");
+        orangImgmin.setText(Float.toString(t2Value) + "°C <");
         sImgmin.setText("");
-
-//        redImgMaxP.setText("");
-//        orangImgMaxP.setText("< "+ Float.toString(p3Value)+ "bar");
-//        greenImgMaxP.setText("< "+Float.toString(p2Value)+ "bar");
-//        sImgMaxP.setText("< "+ Float.toString(p1Value)+ "bar");
-//        redImgminP.setText(Float.toString(p3Value)+ "bar <");
-//        greenImgminP.setText(Float.toString(p1Value)+ "bar <");
-//        orangImgminP.setText(Float.toString(p2Value)+ "bar <");
-//        sImgminP.setText("");
-
     }
-//
-//
-//    private void addDataToChart(float tempIn, float pressIn) {
-//
-//        LineData data = mChart2.getData();
-//        if (data != null) {
-//
-//            ILineDataSet setPress = data.getDataSetByIndex(0);
-//            ILineDataSet setTemp = data.getDataSetByIndex(1);
-//
-//
-//            // setTension.addEntry(...); // can be called as well
-//
-//            if (setPress == null) {
-//                setPress = createSet("Pression",getResources().getColor(R.color.colorPrimary));
-//                data.addDataSet(setPress);
-//
-//            }
-//            if (setTemp == null) {
-//                setTemp = createSet("Température",getResources().getColor(R.color.colorAccent));
-//                data.addDataSet(setTemp);
-//            }
-//
-//
-//            data.addEntry(new Entry(x, (float) tempIn), 0);
-//            data.addEntry(new Entry(x, (float) pressIn), 1);
-//
-//            XAxis xl = mChart2.getXAxis();
-//            addCurrentTime();
-//            final Date currentTime = getInstance().getTime();
-//            xl.setTextColor(getResources().getColor(R.color.colorPrimary));
-//            xl.setDrawGridLines(true);
-//            xl.setAvoidFirstLastClipping(true);
-//            xl.setEnabled(true);
-////            xl.setValueFormatter(new IAxisValueFormatter() {
-////                @Override
-////                public String getFormattedValue(float value, AxisBase axis) {
-////                    return timeArraylist.get((int) value); // xVal is a string array
-////                }
-////
-////
-////            });
-//
-//            data.notifyDataChanged();
-//            x++;
-//            y++;
-//
-//            // let the chart know it's data has changed
-//            mChart.notifyDataSetChanged();
-//
-//            // limit the number of visible entries
-//            mChart.setVisibleXRangeMaximum(8);
-//            // mChart.setVisibleYRange(30, AxisDependency.LEFT);
-//
-//            // move to the latest entry
-//            mChart.moveViewToX(data.getEntryCount());
-//
-//        }
-//
-//    }
-//
-//    private void addDatatoChartMonth(float temp, float press) {
-//
-//        LineData data = mChart2.getData();
-//        if (data != null) {
-//
-////            ILineDataSet setPress = data.getDataSetByIndex(0);
-//            ILineDataSet setTemp = data.getDataSetByIndex(0);
-//
-//
-//            // setTension.addEntry(...); // can be called as well
-//
-//            if (setTemp == null) {
-//                setTemp = createSet2("Température",getResources().getColor(R.color.red));
-//                data.addDataSet(setTemp);
-//
-//            }
-////            if (setPress == null) {
-////                setPress = createSet2("Pression",getResources().getColor(R.color.colorAccent));
-////                data.addDataSet(setPress);
-////            }
-//
-//
-//            data.addEntry(new Entry(x2, (float) temp), 0);
-////            data.addEntry(new Entry(x2, (float) press), 1);
-//            XAxis xl = mChart2.getXAxis();
-//
-//            LimitLine upper_limit = new LimitLine(t3Value, "Max");
-//            upper_limit.setLineWidth(1f);
-//
-//            upper_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_TOP);
-//            upper_limit.setTextSize(10f);
-//            upper_limit.setLineColor(getResources().getColor(R.color.red));
-//
-//            LimitLine lower_limit = new LimitLine(t1Value, "min");
-//            lower_limit.setLineWidth(1f);
-//
-//            lower_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-//            lower_limit.setTextSize(10f);
-//            upper_limit.setLineColor(getResources().getColor(R.color.GreenAccent));
-//
-//            YAxis leftAxis = mChart2.getAxisLeft();
-//                // reset all limit lines to avoid overlapping lines
-//            leftAxis.removeAllLimitLines();
-//            leftAxis.addLimitLine(upper_limit);
-//            leftAxis.addLimitLine(lower_limit);
-//            leftAxis.setDrawLimitLinesBehindData(true);
-//            leftAxis.setEnabled(true);
-//
-//            xl.setTextColor(getResources().getColor(R.color.colorPrimary));
-//            xl.setDrawGridLines(true);
-//            xl.setAvoidFirstLastClipping(true);
-//            xl.setEnabled(true);
-////            xl.setValueFormatter(new IAxisValueFormatter() {
-////                @Override
-////                public String getFormattedValue(float value, AxisBase axis) {
-////                    return lastMonthListX.get((int) value); // xVal is a string array
-////                }
-////
-////
-////            });
-//
-//            data.notifyDataChanged();
-//            x2++;
-//            y++;
-//
-//            // let the chart know it's data has changed
-//            mChart2.notifyDataSetChanged();
-//
-//            // move to the latest entry
-//            mChart2.moveViewToX(data.getEntryCount());
-//
-//        }
-//
-//    }
-//
-//    private void addDatatoChartMonthNew(float temp, float press) {
-//
-//        LineData data = mChart2.getData();
-//        if (data != null) {
-//
-//            ILineDataSet setPress = data.getDataSetByIndex(0);
-//            ILineDataSet setTemp = data.getDataSetByIndex(0);
-//
-//
-//            // setTension.addEntry(...); // can be called as well
-//
-//            if (setTemp == null) {
-//                setTemp = createSet2("Température",getResources().getColor(R.color.red));
-//                data.addDataSet(setTemp);
-//
-//            }
-////            if (setPress == null) {
-////                setPress = createSet2("Pression",getResources().getColor(R.color.colorAccent));
-////                data.addDataSet(setPress);
-////            }
-//
-//
-//            data.addEntry(new Entry(x2, (float) temp), 0);
-//            data.addEntry(new Entry(x2, (float) press), 1);
-//            XAxis xl = mChart2.getXAxis();
-//
-//            lastMonthListX.add(getCurrentTime());
-//
-//            xl.setTextColor(getResources().getColor(R.color.colorPrimary));
-//            xl.setDrawGridLines(true);
-//            xl.setAvoidFirstLastClipping(true);
-//            xl.setEnabled(true);
-////            xl.setValueFormatter(new IAxisValueFormatter() {
-////                @Override
-////                public String getFormattedValue(float value, AxisBase axis) {
-////                    return lastMonthListX.get((int) value); // xVal is a string array
-////                }
-////
-////
-////            });
-//
-//            data.notifyDataChanged();
-//            x2++;
-//            y++;
-//
-//            // let the chart know it's data has changed
-//            mChart2.notifyDataSetChanged();
-//
-//            // move to the latest entry
-//            mChart2.moveViewToX(data.getEntryCount());
-//
-//        }
-//
-//    }
-
-
-
-//
-//    private void addDatatoChartYear(float temp, float press) {
-//
-//        LineData data = mChart3.getData();
-//        if (data != null) {
-//
-//            ILineDataSet setPress = data.getDataSetByIndex(0);
-//            ILineDataSet setTemp = data.getDataSetByIndex(0);
-//
-//
-//            // setTension.addEntry(...); // can be called as well
-//
-//            if (setTemp == null) {
-//                setTemp = createSet2("Température",getResources().getColor(R.color.colorPrimary));
-//                data.addDataSet(setTemp);
-//
-//            }
-//            if (setPress == null) {
-//                setPress = createSet2("Pression",getResources().getColor(R.color.colorAccent));
-//                data.addDataSet(setPress);
-//            }
-//
-//
-//            data.addEntry(new Entry(x3, (float) temp), 0);
-//            data.addEntry(new Entry(x3, (float) press), 1);
-//            XAxis xl = mChart3.getXAxis();
-//
-//            final Date currentTime = getInstance().getTime();
-//            LimitLine upper_limit = new LimitLine(t3Value, "Max");
-//            upper_limit.setLineWidth(1f);
-//
-//            upper_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_TOP);
-//            upper_limit.setTextSize(10f);
-//            upper_limit.setLineColor(getResources().getColor(R.color.red));
-//
-//            LimitLine lower_limit = new LimitLine(t1Value, "min");
-//            lower_limit.setLineWidth(1f);
-//
-//            lower_limit.setLabelPosition(LimitLine.LimitLabelPosition.RIGHT_BOTTOM);
-//            lower_limit.setTextSize(10f);
-//            upper_limit.setLineColor(getResources().getColor(R.color.GreenAccent));
-//
-//            YAxis leftAxis = mChart3.getAxisLeft();
-//            // reset all limit lines to avoid overlapping lines
-//            leftAxis.removeAllLimitLines();
-//            leftAxis.addLimitLine(upper_limit);
-//            leftAxis.addLimitLine(lower_limit);
-//            xl.setTextColor(getResources().getColor(R.color.colorPrimary));
-//            xl.setDrawGridLines(true);
-//            xl.setAvoidFirstLastClipping(true);
-//            xl.setEnabled(true);
-////            xl.setValueFormatter(new IAxisValueFormatter() {
-////                @Override
-////                public String getFormattedValue(float value, AxisBase axis) {
-////                    return lastYearListX.get((int) value); // xVal is a string array
-////                }
-////
-////
-////            });
-//            data.notifyDataChanged();
-//            x3++;
-//            y++;
-//
-//            // let the chart know it's data has changed
-//            mChart3.notifyDataSetChanged();
-//            // move to the latest entry
-//            mChart3.moveViewToX(data.getEntryCount());
-//
-//        }
-//
-//    }
-
 
     public  void addCurrentTime() {
         SimpleDateFormat sdfDate = new SimpleDateFormat("HH:mm:ss");
@@ -821,11 +582,11 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     @Override
     public void applyTexts(String t1, String t2, String t3) {
 
-     if(tP==1){
-         t3Value= Integer.parseInt(t3);
-         t2Value= Integer.parseInt(t2);
-         t1Value= Integer.parseInt(t1);
-     }
+        if(tP==1){
+            t3Value= Integer.parseInt(t3);
+            t2Value= Integer.parseInt(t2);
+            t1Value= Integer.parseInt(t1);
+        }
         if(tP==2){
             p3Value= Integer.parseInt(t3);
             p2Value= Integer.parseInt(t2);
@@ -877,7 +638,7 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         String text ;
         float a=t1Value*100;
         float z=t2Value*100;
-        float k=t3Value*100; 
+        float k=t3Value*100;
         text = a +"*"+z+"*"+k ;
         return text ;
     }
@@ -885,10 +646,10 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
     public void showMode(int t1){
 
         if(t1==0){
-           mRec.setTextColor(getApplication().getResources().getColor(R.color.GreenAccent));
+            mRec.setTextColor(getApplication().getResources().getColor(R.color.GreenAccent));
 //           mRec.setBackgroundTintList(ColorStateList.valueOf(getApplication().getResources().getColor(R.color.primaryLightColor)));
             mEmet.setBackgroundColor(getApplication().getResources().getColor(R.color.primaryLightColor));
-           mEmet.setTextColor(getApplication().getResources().getColor(R.color.primaryLightColor));
+            mEmet.setTextColor(getApplication().getResources().getColor(R.color.primaryLightColor));
             mEmet.setBackgroundColor(getApplication().getResources().getColor(R.color.colorAccent));
 //           mEmet.setBackgroundTintList(ColorStateList.valueOf(getApplication().getResources().getColor(R.color.colorAccent)));
 
@@ -915,4 +676,124 @@ public class MainActivity extends AppCompatActivity implements tempDialog.Exampl
         v.vibrate(pattern, -1);
     }
 
+    @Override
+    protected void onResume() {
+//        setFilters();  // Start listening notifications from UsbService
+//        startService(UsbService.class, usbConnection, null); // Start UsbService(if it was not started before) and Bind it
+        super.onResume();
     }
+
+
+    @Override
+    public void onPause() {
+        super.onPause();
+//        unregisterReceiver(broadcastReceiver);
+//        unbindService(usbConnection);
+    }
+
+    private final ServiceConnection usbConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName arg0, IBinder arg1) {
+            usbService = ((UsbService.UsbBinder) arg1).getService();
+            usbService.setHandler(mHandler);
+        }
+
+        @Override
+        public void onServiceDisconnected(ComponentName arg0) {
+            usbService = null;
+        }
+    };
+
+    private void startService(Class<?> service, ServiceConnection serviceConnection, Bundle extras) {
+        if (!UsbService.SERVICE_CONNECTED) {
+            Intent startService = new Intent(this, service);
+            if (extras != null && !extras.isEmpty()) {
+                Set<String> keys = extras.keySet();
+                for (String key : keys) {
+                    String extra = extras.getString(key);
+                    startService.putExtra(key, extra);
+                }
+            }
+            startService(startService);
+        }
+        Intent bindingIntent = new Intent(this, service);
+        bindService(bindingIntent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+
+    private void setFilters() {
+        IntentFilter filter = new IntentFilter();
+        filter.addAction(UsbService.ACTION_USB_PERMISSION_GRANTED);
+        filter.addAction(UsbService.ACTION_NO_USB);
+        filter.addAction(UsbService.ACTION_USB_DISCONNECTED);
+        filter.addAction(UsbService.ACTION_USB_NOT_SUPPORTED);
+        filter.addAction(UsbService.ACTION_USB_PERMISSION_NOT_GRANTED);
+        registerReceiver(broadcastReceiver, filter);
+    }
+
+
+    private final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case UsbService.ACTION_USB_PERMISSION_GRANTED: // USB PERMISSION GRANTED
+                    Toast.makeText(context, "USB Ready", Toast.LENGTH_SHORT).show();
+                    break;
+                case UsbService.ACTION_USB_PERMISSION_NOT_GRANTED: // USB PERMISSION NOT GRANTED
+                    Toast.makeText(context, "USB Permission not granted", Toast.LENGTH_SHORT).show();
+                    break;
+                case UsbService.ACTION_NO_USB: // NO USB CONNECTED
+                    Toast.makeText(context, "No USB connected", Toast.LENGTH_SHORT).show();
+                    break;
+                case UsbService.ACTION_USB_DISCONNECTED: // USB DISCONNECTED
+                    Toast.makeText(context, "USB disconnected", Toast.LENGTH_SHORT).show();
+                    break;
+                case UsbService.ACTION_USB_NOT_SUPPORTED: // USB NOT SUPPORTED
+                    Toast.makeText(context, "USB device not supported", Toast.LENGTH_SHORT).show();
+                    break;
+            }
+        }
+    };
+
+
+    /*
+     * This handler will be passed to UsbService. Data received from serial port is displayed through this handler
+     */
+    private class MyHandler extends Handler {
+        private final WeakReference<MainActivity> mActivity;
+
+        public MyHandler(MainActivity activity) {
+            mActivity = new WeakReference<>(activity);
+        }
+
+        String dataStock = "";
+        String data_split[] ;
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case UsbService.MESSAGE_FROM_SERIAL_PORT:
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            data += (String) msg.obj;
+                            int index = data.indexOf('S');
+                            if (index>=0 && data.indexOf('F')>index) {
+                                dataStock = data.substring(index);
+                                data_split = dataStock.split(";");
+                                affectation(data_split[1],data_split[2],data_split[3]);
+                                data = "";
+                            };
+                        }
+                    });
+                    break;
+                case UsbService.CTS_CHANGE:
+                    Toast.makeText(mActivity.get(), "CTS_CHANGE",Toast.LENGTH_LONG).show();
+                    break;
+                case UsbService.DSR_CHANGE:
+                    Toast.makeText(mActivity.get(), "DSR_CHANGE",Toast.LENGTH_LONG).show();
+                    break;
+            }
+        }
+    }
+
+}

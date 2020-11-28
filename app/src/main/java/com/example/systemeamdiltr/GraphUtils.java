@@ -165,14 +165,16 @@ public class GraphUtils {
 
 
             data.notifyDataChanged();
-
-            // let the graph know it's data has changed
             mChart.notifyDataSetChanged();
+            // let the graph know it's data has changed
+//            mChart.notifyDataSetChanged();
             mChart.invalidate();
             updateLegend();
             if (minLimit!=0)
                 mChart.setVisibleXRange(minLimit,maxLimit);
-            mChart.moveViewToX(data.getEntryCount());
+
+
+            mChart.moveViewToX(data.getXMax());
 
         }
 

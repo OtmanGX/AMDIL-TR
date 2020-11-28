@@ -123,18 +123,6 @@
                     </LinearLayout>
 
                     <Button
-                        android:id="@+id/connect_id"
-                        android:layout_width="110dp"
-                        android:layout_height="80dp"
-                        android:layout_margin="5dp"
-                        android:background="@color/colorAccent"
-                        android:text="Etablir la connexion"
-                        android:textColor="@color/primaryLightColor"
-                        android:textColorHighlight="@color/darkred"
-                        android:textSize="12sp"
-                        android:textStyle="bold" />
-
-                    <Button
                         android:id="@+id/updatBtn"
                         android:layout_width="110dp"
                         android:layout_height="80dp"

@@ -34,6 +34,10 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/filepaths" />
         </provider>
+        <service
+            android:name=".UsbService"
+            android:enabled="true"
+            android:exported="true"></service>
     </application>
 
 </manifest>
